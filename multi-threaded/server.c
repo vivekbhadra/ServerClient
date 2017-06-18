@@ -21,9 +21,7 @@ struct threadData {
 	int len;
 	char clientAddr[CLADDR_LEN];
 };
-//
-// This will handle connection for each client
-//
+
 void *connection_handler(void *arg)
 {
 	char buffer[BUF_SIZE];
@@ -39,7 +37,6 @@ void *connection_handler(void *arg)
 	    	fprintf(stderr, "Error receiving data: %s\n", gai_strerror(ret));
 	    	exit(EXIT_FAILURE);
 	    }
-
 	    message = (message_t *)buffer;
 	    fprintf(stdout, "Received %s request from %s\n", message->req ? "WRITE" : "READ", tData->clientAddr);
 
@@ -56,7 +53,6 @@ void *connection_handler(void *arg)
 	    case WRITE_REQ:
 	    	break;
 	    }
-
 	}
 	return 0;
 }
