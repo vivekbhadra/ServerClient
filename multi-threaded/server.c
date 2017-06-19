@@ -48,20 +48,17 @@ int initialize_database(server_data_t *servData, const char *db_name)
 
 int read_from_database(server_data_t *servData)
 {
-    char buffer[2000];
     if (!servData) {
         return -1;
     } else {
         pthread_mutex_lock(&servData->rwsem);
         fseek( servData->fp, 0, SEEK_SET );
-        if(fgets(buffer, MESSAGE_LEN, servData->fp) == NULL)
+        if(fgets(servData->message, MESSAGE_LEN, servData->fp) == NULL) {
             fprintf(stderr, "ERROR reading file\n");
-        else
-        	strncpy(servData->message, buffer, BUF_SIZE);
+        }
         fflush(servData->fp);
         pthread_mutex_unlock(&servData->rwsem);
     }
-    
     return 0;
 }
 
@@ -75,6 +72,8 @@ int write_database(server_data_t *servData, const char * buffer)
         fflush(servData->fp);
         pthread_mutex_unlock(&servData->rwsem);
     }
+
+    return 0;
 }
 
 
@@ -96,40 +95,44 @@ void *connection_handler(void *arg)
 			    0,
 			    (struct sockaddr *) tData->cl_addr,
 			    &tData->len);
-	if(ret < 0) {
-	    fprintf(stderr, "Error receiving data: %s\n", gai_strerror(ret));
-	    exit(EXIT_FAILURE);
-	}
-	message = (message_t *)buffer;
-	fprintf(stdout, "Received %s request from %s\n",
-			message->req ? "WRITE" : "READ",
-			tData->clientAddr);
+	    if(ret < 0) {
+	        fprintf(stderr, "Error receiving data: %s\n", gai_strerror(ret));
+	        exit(EXIT_FAILURE);;
+	    } else if (ret == 0) {
+	    	fprintf(stderr, "One of the client closed connection\n");
+	    	exit(EXIT_FAILURE);;
+	    }
+	    message = (message_t *)buffer;
+	    fprintf(stdout, "<== Received %s request from %s\n",
+		    message->req ? "WRITE" : "READ",
+		    tData->clientAddr);
 
-	switch(message->req) {
-	case READ_REQ:
-        if(read_from_database(tData->db) < 0) {
-            fprintf(stderr, "Error reading from database \n");
-            exit(EXIT_FAILURE);
-        } else {
-            fprintf(stdout, "message being sent %s\n", tData->db->message);
-        }
-	    ret = sendto(tData->sock, 
+	    switch(message->req) {
+        case READ_REQ:
+            if(read_from_database(tData->db) < 0) {
+                fprintf(stderr, "Error reading from database \n");
+                exit(EXIT_FAILURE);
+            }
+
+            ret = sendto(tData->sock,
 	    		tData->db->message,
 				BUF_SIZE,
 				0,
 				(struct sockaddr *) tData->cl_addr,
 				tData->len);
-        if (ret < 0) {
-	        fprintf(stderr, "Error sending data!\n");
-	    	exit(EXIT_FAILURE);
-	    }
-	    fprintf(stdout, "Sent data to %s: %s\n", tData->clientAddr, message->message);
-	    break;
+            if (ret < 0) {
+	            fprintf(stderr, "Error sending data!\n");
+	    	    exit(EXIT_FAILURE);
+	        }
+            fprintf(stdout, "SEND message to client ==> %s\n", tData->db->message);
+	        break;
 
-    case WRITE_REQ:
+        case WRITE_REQ:
             if(write_database(tData->db, message->message) < 0) {
                 fprintf(stderr, "Error writing to database \n");
-                exit(EXIT_FAILURE);      
+                exit(EXIT_FAILURE);
+            } else {
+          	    fprintf(stderr, "UPDATED message from client.\n");
             }
             break;
 	}

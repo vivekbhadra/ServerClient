@@ -24,7 +24,7 @@ int main(int argc, char**argv) {
     char temp_msg[BUF_SIZE] = {0};
 
     if (argc < 2) {
-        printf("usage: client < ip address >\n");
+    	fprintf(stdout, "usage: client < ip address >\n");
         exit(1);
     }
 
@@ -32,7 +32,7 @@ int main(int argc, char**argv) {
 
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
-        printf("Error creating socket!\n");
+    	fprintf(stderr, "Error creating socket!\n");
         exit(1);
     }
     printf("Socket created...\n");
@@ -44,10 +44,10 @@ int main(int argc, char**argv) {
 
     ret = connect(sockfd, (struct sockaddr *) &addr, sizeof(addr));
     if (ret < 0) {
-        printf("Error connecting to the server!\n");
+    	fprintf(stdout, "Error connecting to the server!\n");
         exit(1);
     }
-    printf("Connected to the server...\n");
+    fprintf(stdout, "Connected to the server...\n");
 
     memset(&req, 0, sizeof(message_t));
 
@@ -55,7 +55,6 @@ int main(int argc, char**argv) {
     	fprintf(stdout, "Enter your request(read=0 write=1): ");
     	fgets(choice, 32, stdin);
     	req.req = strtol(choice, &endptr, 10);
-        fprintf(stdout, "req.req: %u\n", req.req);
         switch(req.req) {
         case READ_REQ:
             fprintf(stdout, "Sending the READ request now \n");
@@ -68,12 +67,12 @@ int main(int argc, char**argv) {
             if (ret < 0) {
             	fprintf(stderr, "Error sending the %s request\n", req.req ? "WRITE" : "READ");
             } else {
-            	fprintf(stdout, "Waiting for the server response...");
+            	fprintf(stdout, "Waiting for the server response...\n");
             	ret = recvfrom(sockfd, buffer, BUF_SIZE, 0, NULL, NULL);
             	if (ret < 0) {
             	    printf("Error receiving data!\n");
             	} else {
-            	    printf("Received: ");
+            	    printf("==> Received: ");
             	    fputs(buffer, stdout);
             	    printf("\n");
             	}
@@ -95,7 +94,6 @@ int main(int argc, char**argv) {
                 fprintf(stdout, "Sent %s request with new message %s\n",
             	            req.req ? "WRITE" : "READ",
             		    	req.message);
-                fputs(req.message, stdout);
                 fprintf(stderr, "\n");
             }
             break;
@@ -103,6 +101,5 @@ int main(int argc, char**argv) {
         	fprintf(stdout, "Unknown request\n");
         }
     }
-
     exit(EXIT_SUCCESS);
 }
