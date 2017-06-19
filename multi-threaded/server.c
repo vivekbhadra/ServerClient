@@ -22,23 +22,35 @@ struct threadData {
 	char clientAddr[CLADDR_LEN];
 };
 
+static server_data_t servData;
+
+/*
+ * Per connection thread function for handling connection.
+ * */
 void *connection_handler(void *arg)
 {
-	char buffer[BUF_SIZE];
-	int ret;
+    char buffer[BUF_SIZE];
+    int ret;
 	message_t *message;
 	struct threadData *tData = (struct threadData *)arg;
 
 	for (;;) {
 	    memset(buffer, 0, BUF_SIZE);
-	    fprintf(stdout, "Hello World I am new connection\n");
-	    ret = recvfrom(tData->sock, buffer, BUF_SIZE, 0, (struct sockaddr *) tData->cl_addr, &tData->len);
+
+	    ret = recvfrom(tData->sock,
+	    		buffer,
+				BUF_SIZE,
+				0,
+				(struct sockaddr *) tData->cl_addr,
+				&tData->len);
 	    if(ret < 0) {
 	    	fprintf(stderr, "Error receiving data: %s\n", gai_strerror(ret));
 	    	exit(EXIT_FAILURE);
 	    }
 	    message = (message_t *)buffer;
-	    fprintf(stdout, "Received %s request from %s\n", message->req ? "WRITE" : "READ", tData->clientAddr);
+	    fprintf(stdout, "Received %s request from %s\n",
+	    		message->req ? "WRITE" : "READ",
+	    		tData->clientAddr);
 
 	    switch(message->req) {
 	    case READ_REQ:
