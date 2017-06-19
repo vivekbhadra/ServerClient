@@ -2,6 +2,11 @@
 #define COMMON_H
 #endif
 
+#include <pthread.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <error.h>
+
 #define MESSAGE_LEN 2000
 
 typedef enum request {
@@ -14,12 +19,3 @@ typedef struct message {
     char message[MESSAGE_LEN];
 }message_t;
 
-typedef struct server_data {
-    char message[MESSAGE_LEN];
-    pthread_mutex_t rwsem;
-    FILE *fp;
-}server_data_t;
-
-extern int initialize_database(server_data_t *servData, const char *db_name);
-extern char * read_database(server_data_t *servData, const char *db_name);
-extern void write_database(void);
