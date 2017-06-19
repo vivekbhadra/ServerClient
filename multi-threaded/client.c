@@ -53,15 +53,18 @@ int main(int argc, char**argv) {
 
     while (1) {
     	fprintf(stdout, "Enter your request(read=0 write=1): ");
-        //scanf("%u", &req.req);
-        //fflush(stdin);
     	fgets(choice, 32, stdin);
     	req.req = strtol(choice, &endptr, 10);
         fprintf(stdout, "req.req: %u\n", req.req);
         switch(req.req) {
         case READ_REQ:
             fprintf(stdout, "Sending the READ request now \n");
-            ret = sendto(sockfd, (const void *)&req, BUF_SIZE, 0, (struct sockaddr *) &addr, sizeof(addr));
+            ret = sendto(sockfd, 
+                        (const void *)&req, 
+                        BUF_SIZE, 
+                        0, 
+                        (struct sockaddr *) &addr, 
+                        sizeof(addr));
             if (ret < 0) {
             	fprintf(stderr, "Error sending the %s request\n", req.req ? "WRITE" : "READ");
             } else {
