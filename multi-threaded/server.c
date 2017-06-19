@@ -53,11 +53,11 @@ int read_from_database(server_data_t *servData)
         return -1;
     } else {
         pthread_mutex_lock(&servData->rwsem);
-        fseek( servData->fp, 0, SEEK_SET );
-        if(fgets(buffer, MESSAGE_LEN, servData->fp) == NULL)
+        fseek(servData->fp, 0, SEEK_SET );
+        if(fgets(servData->message, MESSAGE_LEN, servData->fp) == NULL)
             fprintf(stderr, "ERROR reading file\n");
-        else
-        	strncpy(servData->message, buffer, BUF_SIZE);
+        //else
+        	//strncpy(servData->message, buffer, BUF_SIZE);
         fflush(servData->fp);
         pthread_mutex_unlock(&servData->rwsem);
     }
@@ -71,12 +71,12 @@ int write_database(server_data_t *servData, const char * buffer)
         return -1;
     } else {
         pthread_mutex_lock(&servData->rwsem);
+        fseek(servData->fp, 0, SEEK_SET);
         fputs (buffer,servData->fp);
         fflush(servData->fp);
         pthread_mutex_unlock(&servData->rwsem);
     }
 }
-
 
 /*
  * Per connection thread function for handling connection.

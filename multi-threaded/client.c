@@ -95,7 +95,7 @@ int main(int argc, char**argv) {
                 fprintf(stdout, "Sent %s request with new message %s\n",
             	            req.req ? "WRITE" : "READ",
             		    	req.message);
-                fputs(req.message, stdout);
+                //fputs(req.message, stdout);
                 fprintf(stderr, "\n");
             }
             break;
