@@ -68,6 +68,7 @@ int write_database(server_data_t *servData, const char * buffer)
         return -1;
     } else {
         pthread_mutex_lock(&servData->rwsem);
+        fseek(servData->fp, 0, SEEK_SET);
         fputs (buffer,servData->fp);
         fflush(servData->fp);
         pthread_mutex_unlock(&servData->rwsem);
@@ -75,7 +76,6 @@ int write_database(server_data_t *servData, const char * buffer)
 
     return 0;
 }
-
 
 /*
  * Per connection thread function for handling connection.
