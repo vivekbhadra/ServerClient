@@ -36,7 +36,7 @@ int initialize_database(server_data_t *servData, const char *db_name)
         return -1;
     } else {
         pthread_mutex_init(&servData->rwsem, NULL);
-        servData->fp = fopen(db_name,"r");
+        servData->fp = fopen(db_name,"w+");
         if (!servData->fp) {
             fprintf(stderr, "ERROR couldn't open database file \n");
             perror("");
@@ -46,21 +46,19 @@ int initialize_database(server_data_t *servData, const char *db_name)
     return 0;
 }
 
-int read_from_database(char *buff, server_data_t *servData)
+int read_from_database(server_data_t *servData)
 {
     char buffer[2000];
     if (!servData) {
         return -1;
     } else {
         pthread_mutex_lock(&servData->rwsem);
-        if(fgets(buff, MESSAGE_LEN, servData->fp) == NULL)
+        fseek( servData->fp, 0, SEEK_SET );
+        if(fgets(buffer, MESSAGE_LEN, servData->fp) == NULL)
             fprintf(stderr, "ERROR reading file\n");
-        //fgets(buffer, MESSAGE_LEN, servData->fp);
-        //while(fgets(buffer, MESSAGE_LEN - 1, servData->fp) != NULL) 
-        //{
-            //printf("Hello Vivek\n");
-            //printf ("%s\n", buffer); /* ...such as show it on the screen */
-        //}  
+        else
+        	strncpy(servData->message, buffer, BUF_SIZE);
+        fflush(servData->fp);
         pthread_mutex_unlock(&servData->rwsem);
     }
     
@@ -74,6 +72,7 @@ int write_database(server_data_t *servData, const char * buffer)
     } else {
         pthread_mutex_lock(&servData->rwsem);
         fputs (buffer,servData->fp);
+        fflush(servData->fp);
         pthread_mutex_unlock(&servData->rwsem);
     }
 }
@@ -93,10 +92,10 @@ void *connection_handler(void *arg)
         memset(buffer, 0, BUF_SIZE);
         ret = recvfrom(tData->sock,
 	    		buffer,
-			BUF_SIZE,
-			0,
-			(struct sockaddr *) tData->cl_addr,
-			&tData->len);
+			    BUF_SIZE,
+			    0,
+			    (struct sockaddr *) tData->cl_addr,
+			    &tData->len);
 	if(ret < 0) {
 	    fprintf(stderr, "Error receiving data: %s\n", gai_strerror(ret));
 	    exit(EXIT_FAILURE);
@@ -108,29 +107,26 @@ void *connection_handler(void *arg)
 
 	switch(message->req) {
 	case READ_REQ:
-            {
-            char buff[2000];
-            if(read_from_database(buff, tData->db) < 0) {
-                fprintf(stderr, "Error reading from database \n");
-                exit(EXIT_FAILURE);      
-            } else {
-                strcpy(message->message, buff);
-                fprintf(stdout, "message being sent %s\n", message->message);
-            }
+        if(read_from_database(tData->db) < 0) {
+            fprintf(stderr, "Error reading from database \n");
+            exit(EXIT_FAILURE);
+        } else {
+            fprintf(stdout, "message being sent %s\n", tData->db->message);
+        }
 	    ret = sendto(tData->sock, 
-                        message->message, 
-                        BUF_SIZE, 
-                        0, 
-                        (struct sockaddr *) tData->cl_addr, 
-                        tData->len);
-            if (ret < 0) {
+	    		tData->db->message,
+				BUF_SIZE,
+				0,
+				(struct sockaddr *) tData->cl_addr,
+				tData->len);
+        if (ret < 0) {
 	        fprintf(stderr, "Error sending data!\n");
 	    	exit(EXIT_FAILURE);
 	    }
 	    fprintf(stdout, "Sent data to %s: %s\n", tData->clientAddr, message->message);
 	    break;
-            }
-        case WRITE_REQ:
+
+    case WRITE_REQ:
             if(write_database(tData->db, message->message) < 0) {
                 fprintf(stderr, "Error writing to database \n");
                 exit(EXIT_FAILURE);      
