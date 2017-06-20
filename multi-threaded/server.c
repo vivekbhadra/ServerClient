@@ -8,6 +8,7 @@
 #include <unistd.h>
 #include <netdb.h>
 #include <pthread.h>
+#include <signal.h>
 #include "common.h"
 
 #define PORT 4444
@@ -22,8 +23,6 @@ typedef struct server_data {
     FILE *fp;
 }server_data_t;
 
-static server_data_t servData;
-
 struct threadData {
     struct sockaddr_in *cl_addr;
     int sock;
@@ -31,7 +30,23 @@ struct threadData {
     char clientAddr[CLADDR_LEN];
     server_data_t *db;
     int connection_id;
-};
+}; 
+
+int client_count = 0;
+static server_data_t servData;
+
+void  intHandler(int sig)
+{
+     char  c;
+     signal(sig, SIG_IGN);
+     printf("Do you really want to quit? [y/n] ");
+     c = getchar();
+     if (c == 'y' || c == 'Y') 
+          exit(0);
+     else
+          signal(SIGINT, intHandler);
+     getchar(); 
+}
 
 int initialize_database(server_data_t *servData, const char *db_name)
 {
@@ -163,7 +178,7 @@ int main(int argc, char**argv) {
         fprintf(stderr, "Error coudln't initialize databse\n");
         exit(EXIT_FAILURE);
     } 
-
+    signal(SIGINT, intHandler);
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         fprintf(stderr, "Error creating socket: %s\n", gai_strerror(sockfd));
