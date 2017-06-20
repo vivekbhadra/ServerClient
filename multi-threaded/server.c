@@ -100,7 +100,7 @@ void *connection_handler(void *arg)
 	        exit(EXIT_FAILURE);;
 	    } else if (ret == 0) {
 	    	fprintf(stderr, "One of the client closed connection\n");
-	    	exit(EXIT_FAILURE);;
+	    	pthread_exit(NULL);
 	    }
 	    message = (message_t *)buffer;
 	    fprintf(stdout, "<== Received %s request from %s\n",
