@@ -13,6 +13,8 @@
 #define PORT 4444
 #define BUF_SIZE 2000
 #define CLADDR_LEN 100
+#define MAX_BACKLOG 5
+#define MAX_CLIENT 1000
 
 typedef struct server_data {
     char message[BUF_SIZE];
@@ -27,7 +29,8 @@ struct threadData {
     int sock;
     int len;
     char clientAddr[CLADDR_LEN];
-    server_data_t *db;        
+    server_data_t *db;
+    int connection_id;
 };
 
 int initialize_database(server_data_t *servData, const char *db_name)
@@ -99,7 +102,7 @@ void *connection_handler(void *arg)
 	        fprintf(stderr, "Error receiving data: %s\n", gai_strerror(ret));
 	        exit(EXIT_FAILURE);;
 	    } else if (ret == 0) {
-	    	fprintf(stderr, "One of the client closed connection\n");
+	    	fprintf(stderr, "Client [connection id %d] closed connection\n", tData->connection_id);
 	    	pthread_exit(NULL);
 	    }
 	    message = (message_t *)buffer;
@@ -146,10 +149,12 @@ int main(int argc, char**argv) {
     char buffer[BUF_SIZE];
     pid_t childpid;
     char clientAddr[CLADDR_LEN];
-    pthread_t thread_id;
+    pthread_t thread_id[MAX_CLIENT];
+    int client_count = 0;
     int client_sock, c;
-    struct threadData *threadParams;
+    struct threadData *threadParams[MAX_CLIENT];
     char *db_name[20];
+    int i;
 
     if (argc < 2) {
         printf("usage: server < database file name >\n");
@@ -179,7 +184,7 @@ int main(int argc, char**argv) {
     }
 
     fprintf(stdout, "Waiting for a connection...\n");
-    listen(sockfd, 5);
+    listen(sockfd, MAX_BACKLOG);
 
     for (;;) {
         len = sizeof(cl_addr);
@@ -188,27 +193,36 @@ int main(int argc, char**argv) {
             fprintf(stderr, "Error accepting connection: %s\n", gai_strerror(ret));
 	    exit(EXIT_FAILURE);
         }
-        fprintf(stdout, "Connection accepted...\n");
+        fprintf(stdout, "Connection [%d] accepted...\n", client_count);
         inet_ntop(AF_INET, &(cl_addr.sin_addr), clientAddr, CLADDR_LEN);
         /*
         * Create a new child process to handle the new client.
         * */
-        threadParams = malloc(sizeof(struct threadData));
-        if (!threadParams) {
+        threadParams[client_count] = malloc(sizeof(struct threadData));
+        if (!threadParams[client_count]) {
             fprintf(stderr, "Error accepting connection: %s\n", gai_strerror(ret));
-  	    exit(EXIT_FAILURE);
+  	        exit(EXIT_FAILURE);
         } else {
-            threadParams->cl_addr = (struct sockaddr_in *) &cl_addr;
-            threadParams->sock = newsockfd;
-            threadParams->len = len;
-            strncpy(threadParams->clientAddr, clientAddr, CLADDR_LEN);
-            threadParams->db = &servData;
+            threadParams[client_count]->cl_addr = (struct sockaddr_in *) &cl_addr;
+            threadParams[client_count]->sock = newsockfd;
+            threadParams[client_count]->len = len;
+            strncpy(threadParams[client_count]->clientAddr, clientAddr, CLADDR_LEN);
+            threadParams[client_count]->db = &servData;
+            threadParams[client_count]->connection_id = client_count;
         }
-
-        if(pthread_create( &thread_id, NULL,  connection_handler, (void*) threadParams) < 0) {
-            fprintf(stderr, "Error Client handler function couldn't be crated.\n");
-            exit(EXIT_FAILURE);
+        if(pthread_create( &thread_id[client_count],
+        		NULL,
+				connection_handler,
+				(void*) threadParams[client_count]) < 0) {
+            fprintf(stderr, "Error Client handler function couldn't be created.\n");
         }
+        client_count++;
+        if (client_count > MAX_CLIENT)
+        	break;
+     }
+     for(i = 0; i < client_count; i++) {
+    	 pthread_join(thread_id[i], NULL);
+         free(threadParams[i]);
      }
      exit(EXIT_SUCCESS);
 }
