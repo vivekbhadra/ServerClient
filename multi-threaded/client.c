@@ -28,14 +28,13 @@ int main(int argc, char**argv) {
     }
 
     serverAddr = argv[1];
-
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     if (sockfd < 0) {
         fprintf(stderr, "Error creating socket!\n");
         exit(1);
     }
-    printf("Socket created...\n");
 
+    fprintf(stdout, "Socket created...\n");
     memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_addr.s_addr = inet_addr(serverAddr);
@@ -47,7 +46,6 @@ int main(int argc, char**argv) {
         exit(1);
     }
     fprintf(stdout, "Connected to the server...\n");
-
     memset(&req, 0, sizeof(message_t));
 
     while (1) {
@@ -64,7 +62,8 @@ int main(int argc, char**argv) {
                         (struct sockaddr *) &addr, 
                         sizeof(addr));
             if (ret < 0) {
-                fprintf(stderr, "Error sending the %s request\n", req.req ? "WRITE" : "READ");
+                fprintf(stderr, "Error sending the %s request\n", 
+                        req.req ? "WRITE" : "READ");
             } else {
                 fprintf(stdout, "Waiting for the server response...\n");
                 ret = recvfrom(sockfd, buffer, BUF_SIZE, 0, NULL, NULL);
@@ -88,7 +87,8 @@ int main(int argc, char**argv) {
                          (struct sockaddr *) &addr,
                          sizeof(addr));
             if (ret < 0) {
-                fprintf(stderr, "Error sending %s request!\n", req.req ? "WRITE" : "READ");
+                fprintf(stderr, "Error sending %s request!\n", 
+                        req.req ? "WRITE" : "READ");
             } else {
                 fprintf(stdout, "<== Sent %s request with new message: %s\n",
                         req.req ? "WRITE" : "READ",
