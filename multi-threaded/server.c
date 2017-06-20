@@ -83,7 +83,7 @@ int write_database(server_data_t *servData, const char * buffer)
 /*
  * Per connection thread function for handling connection.
  * */
-void *connection_handler(void *arg)
+void *client_handler(void *arg)
 {
     char buffer[BUF_SIZE];
     int ret;
@@ -93,53 +93,52 @@ void *connection_handler(void *arg)
     for (;;) {
         memset(buffer, 0, BUF_SIZE);
         ret = recvfrom(tData->sock,
-	    		buffer,
-			    BUF_SIZE,
-			    0,
-			    (struct sockaddr *) tData->cl_addr,
-			    &tData->len);
-	    if(ret < 0) {
-	        fprintf(stderr, "Error receiving data: %s\n", gai_strerror(ret));
-	        exit(EXIT_FAILURE);;
-	    } else if (ret == 0) {
-	    	fprintf(stderr, "Client [connection id %d] closed connection\n", tData->connection_id);
-	    	pthread_exit(NULL);
-	    }
-	    message = (message_t *)buffer;
-	    fprintf(stdout, "<== Received %s request from %s\n",
-		    message->req ? "WRITE" : "READ",
-		    tData->clientAddr);
+              buffer,
+              BUF_SIZE,
+              0,
+              (struct sockaddr *) tData->cl_addr,
+              &tData->len);
+              if(ret < 0) {
+                  fprintf(stderr, "Error receiving data: %s\n", gai_strerror(ret));
+                  pthread_exit(NULL);
+              } else if (ret == 0) {
+                  fprintf(stderr, "Client [connection id %d] closed connection\n", tData->connection_id);
+                  pthread_exit(NULL);
+              }
+              message = (message_t *)buffer;
+              fprintf(stdout, "<== Received %s request from %s\n",
+                      message->req ? "WRITE" : "READ",
+                      tData->clientAddr);
 
-	    switch(message->req) {
+        switch(message->req) {
         case READ_REQ:
             if(read_from_database(tData->db) < 0) {
                 fprintf(stderr, "Error reading from database \n");
-                exit(EXIT_FAILURE);
+                pthread_exit(NULL);
             }
             ret = sendto(tData->sock,
-	    		tData->db->message,
-				BUF_SIZE,
-				0,
-				(struct sockaddr *) tData->cl_addr,
-				tData->len);
+                         tData->db->message,
+                         BUF_SIZE,
+                         0,
+                         (struct sockaddr *) tData->cl_addr,
+                         tData->len);
             if (ret < 0) {
-	            fprintf(stderr, "Error sending data!\n");
-	    	    exit(EXIT_FAILURE);
-	        }
+                fprintf(stderr, "Error sending data!\n");
+                pthread_exit(NULL);
+            }
             fprintf(stdout, "SEND message to client ==> %s\n", tData->db->message);
-	        break;
-
+            break;
         case WRITE_REQ:
             if(write_database(tData->db, message->message) < 0) {
                 fprintf(stderr, "Error writing to database \n");
-                exit(EXIT_FAILURE);
+                pthread_exit(NULL);
             } else {
-          	    fprintf(stderr, "UPDATED message from client.\n");
+                fprintf(stderr, "UPDATED message from client.\n");
             }
             break;
-	}
+        }
     }
-	return 0;
+    return 0;
 }
 
 int main(int argc, char**argv) {
@@ -190,7 +189,7 @@ int main(int argc, char**argv) {
         newsockfd = accept(sockfd, (struct sockaddr *) &cl_addr, &len);
         if (newsockfd < 0) {
             fprintf(stderr, "Error accepting connection: %s\n", gai_strerror(ret));
-	    exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE);
         }
         fprintf(stdout, "Connection [%d] accepted...\n", client_count);
         inet_ntop(AF_INET, &(cl_addr.sin_addr), clientAddr, CLADDR_LEN);
@@ -200,7 +199,7 @@ int main(int argc, char**argv) {
         threadParams[client_count] = malloc(sizeof(struct threadData));
         if (!threadParams[client_count]) {
             fprintf(stderr, "Error accepting connection: %s\n", gai_strerror(ret));
-  	        exit(EXIT_FAILURE);
+            exit(EXIT_FAILURE);
         } else {
             threadParams[client_count]->cl_addr = (struct sockaddr_in *) &cl_addr;
             threadParams[client_count]->sock = newsockfd;
@@ -209,19 +208,19 @@ int main(int argc, char**argv) {
             threadParams[client_count]->db = &servData;
             threadParams[client_count]->connection_id = client_count;
         }
-        if(pthread_create( &thread_id[client_count],
-        		NULL,
-				connection_handler,
-				(void*) threadParams[client_count]) < 0) {
+        if(pthread_create(&thread_id[client_count],
+                         NULL,
+                         client_handler,
+                         (void*) threadParams[client_count]) < 0) {
             fprintf(stderr, "Error Client handler function couldn't be created.\n");
         }
         client_count++;
         if (client_count > MAX_CLIENT)
-        	break;
-     }
-     for(i = 0; i < client_count; i++) {
-    	 pthread_join(thread_id[i], NULL);
-         free(threadParams[i]);
-     }
+            break;
+    }
+    for(i = 0; i < client_count; i++) {
+        pthread_join(thread_id[i], NULL);
+        free(threadParams[i]);
+    }
      exit(EXIT_SUCCESS);
 }
