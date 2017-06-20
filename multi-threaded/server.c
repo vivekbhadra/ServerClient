@@ -39,7 +39,7 @@ int initialize_database(server_data_t *servData, const char *db_name)
         return -1;
     } else {
         pthread_mutex_init(&servData->rwsem, NULL);
-        servData->fp = fopen(db_name,"w+");
+        servData->fp = fopen(db_name,"r+");
         if (!servData->fp) {
             fprintf(stderr, "ERROR couldn't open database file \n");
             perror("");
@@ -116,7 +116,6 @@ void *connection_handler(void *arg)
                 fprintf(stderr, "Error reading from database \n");
                 exit(EXIT_FAILURE);
             }
-
             ret = sendto(tData->sock,
 	    		tData->db->message,
 				BUF_SIZE,

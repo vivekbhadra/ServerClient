@@ -72,9 +72,9 @@ int main(int argc, char**argv) {
             	if (ret < 0) {
             	    printf("Error receiving data!\n");
             	} else {
-            	    printf("==> Received: ");
+            		fprintf(stdout, "==> Received: ");
             	    fputs(buffer, stdout);
-            	    printf("\n");
+            	    fprintf(stdout, "\n");
             	}
             }
             break;
