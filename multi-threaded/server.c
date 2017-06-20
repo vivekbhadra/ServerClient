@@ -26,7 +26,7 @@ typedef struct server_data {
 struct threadData {
     struct sockaddr_in *cl_addr;
     int sock;
-    int len;
+    socklen_t len;
     char clientAddr[CLADDR_LEN];
     server_data_t *db;
     int connection_id;
@@ -158,15 +158,12 @@ void *client_handler(void *arg)
 
 int main(int argc, char**argv) {
     struct sockaddr_in addr, cl_addr;
-    int sockfd, len, ret, newsockfd;
-    char buffer[BUF_SIZE];
-    pid_t childpid;
+    int sockfd, ret, newsockfd;
+    socklen_t len;
     char clientAddr[CLADDR_LEN];
     pthread_t thread_id[MAX_CLIENT];
     int client_count = 0;
-    int client_sock, c;
     struct threadData *threadParams[MAX_CLIENT];
-    char *db_name[20];
     int i;
 
     if (argc < 2) {

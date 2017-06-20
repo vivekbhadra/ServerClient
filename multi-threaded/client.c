@@ -14,10 +14,9 @@
 #define BUF_SIZE 2000
 
 int main(int argc, char**argv) {
-    struct sockaddr_in addr, cl_addr;
+    struct sockaddr_in addr;
     int sockfd, ret;
     char buffer[BUF_SIZE];
-    struct hostent * server;
     char * serverAddr;
     message_t req;
     char choice[32], *endptr;
@@ -91,7 +90,7 @@ int main(int argc, char**argv) {
             if (ret < 0) {
                 fprintf(stderr, "Error sending %s request!\n", req.req ? "WRITE" : "READ");
             } else {
-                fprintf(stdout, "Sent %s request with new message: %s\n",
+                fprintf(stdout, "<== Sent %s request with new message: %s\n",
                         req.req ? "WRITE" : "READ",
                         req.message);
                 fprintf(stderr, "\n");
