@@ -91,7 +91,7 @@ int main(int argc, char**argv) {
             if (ret < 0) {
                	fprintf(stderr, "Error sending %s request!\n", req.req ? "WRITE" : "READ");
             } else {
-                fprintf(stdout, "Sent %s request with new message %s\n",
+                fprintf(stdout, "Sent %s request with new message: %s\n",
             	            req.req ? "WRITE" : "READ",
             		    	req.message);
                 fprintf(stderr, "\n");
