@@ -9,6 +9,7 @@
 #include <netdb.h>
 #include <pthread.h>
 #include <signal.h>
+#include <time.h>
 #include "common.h"
 
 #define PORT 4444
@@ -17,10 +18,14 @@
 #define MAX_BACKLOG 5
 #define MAX_CLIENT 1000
 
+#define LOG_FILE_NAME "log.txt"
+
 typedef struct server_data {
     char message[BUF_SIZE];
     pthread_mutex_t rwsem;
+    pthread_mutex_t logsem;
     FILE *fp;
+    FILE *fp_log;
 }server_data_t;
 
 struct threadData {
@@ -54,9 +59,16 @@ int initialize_database(server_data_t *servData, const char *db_name)
         return -1;
     } else {
         pthread_mutex_init(&servData->rwsem, NULL);
+        pthread_mutex_init(&servData->logsem, NULL);
         servData->fp = fopen(db_name,"r+");
         if (!servData->fp) {
             fprintf(stderr, "ERROR couldn't open database file \n");
+            perror("");
+            return -1;
+        }
+        servData->fp_log = fopen(LOG_FILE_NAME, "a");
+        if (!servData->fp_log) {
+            fprintf(stderr, "ERROR couldn't open log file\n");
             perror("");
             return -1;
         }
@@ -95,14 +107,29 @@ int write_database(server_data_t *servData, const char * buffer)
     return 0;
 }
 
+int write_logdata(server_data_t *servData, const char * buffer)
+{
+    if (!servData) {
+        return -1;
+    } else {
+        pthread_mutex_lock(&servData->logsem);
+        fputs (buffer,servData->fp_log);
+        pthread_mutex_unlock(&servData->logsem);
+    }
+    return 0;
+}
+
 /*
  * Per connection thread function for handling connection.
- * */
+ */
 void *client_handler(void *arg)
 {
     char buffer[BUF_SIZE];
     int ret;
     message_t *message;
+    char log_buffer[BUF_SIZE];
+    time_t rawtime;
+    struct tm * timeinfo;
     struct threadData *tData = (struct threadData *)arg;
 
     for (;;) {
@@ -124,6 +151,14 @@ void *client_handler(void *arg)
               fprintf(stdout, "<== Received %s request from %s\n",
                       message->req ? "WRITE" : "READ",
                       tData->clientAddr);
+              time ( &rawtime );
+              timeinfo = localtime ( &rawtime );
+              snprintf(log_buffer, BUF_SIZE, "%s Connection id = %d : IP = %s : REQ type = %s\n",
+            		  asctime (timeinfo),
+            		  tData->connection_id,
+					  tData->clientAddr,
+					  message->req ? "WRITE" : "READ");
+              write_logdata(tData->db, log_buffer);
 
         switch(message->req) {
         case READ_REQ:
@@ -230,6 +265,8 @@ int main(int argc, char**argv) {
         if (client_count > MAX_CLIENT)
             break;
     }
+    fclose(servData.fp);
+    fclose(servData.fp_log);
     for(i = 0; i < client_count; i++) {
         pthread_join(thread_id[i], NULL);
         free(threadParams[i]);
